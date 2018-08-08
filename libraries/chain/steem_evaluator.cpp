@@ -201,11 +201,11 @@ void witness_set_properties_evaluator::do_apply( const witness_set_properties_op
       fc::raw::unpack_from_vector( itr->second, props.subsidized_accounts_per_day );
    }
 
-   itr = o.props.find( "account_subsidy_pool_cap" );
+   itr = o.props.find( "subsidized_accounts_burst_blocks" );
    flags.account_subsidy_pool_changed = itr != o.props.end();
    if( flags.account_subsidy_pool_changed )
    {
-      fc::raw::unpack_from_vector( itr->second, props.account_subsidy_pool_cap );
+      fc::raw::unpack_from_vector( itr->second, props.subsidized_accounts_burst_blocks );
    }
 
    itr = o.props.find( "new_signing_key" );
@@ -254,7 +254,7 @@ void witness_set_properties_evaluator::do_apply( const witness_set_properties_op
 
       if( flags.account_subsidy_pool_changed )
       {
-         w.props.account_subsidy_pool_cap = props.account_subsidy_pool_cap;
+         w.props.subsidized_accounts_burst_blocks = props.subsidized_accounts_burst_blocks;
       }
 
       if( flags.key_changed )

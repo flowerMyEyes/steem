@@ -66,12 +66,12 @@ void update_median_witness_props( database& db )
    } );
    uint32_t median_subsidized_accounts_per_day = active[active.size()/2]->props.subsidized_accounts_per_day;
 
-   /// sort them by account_subsidy_pool_cap
+   /// sort them by subsidized_accounts_burst_blocks
    std::sort( active.begin(), active.end(), [&]( const witness_object* a, const witness_object* b )
    {
-      return a->props.account_subsidy_pool_cap < b->props.account_subsidy_pool_cap;
+      return a->props.subsidized_accounts_burst_blocks < b->props.subsidized_accounts_burst_blocks;
    });
-   uint32_t median_account_subsidy_pool_cap = active[active.size()/2]->props.account_subsidy_pool_cap;
+   uint32_t median_subsidized_accounts_burst_blocks = active[active.size()/2]->props.subsidized_accounts_burst_blocks;
 
    db.modify( wso, [&]( witness_schedule_object& _wso )
    {
@@ -79,13 +79,13 @@ void update_median_witness_props( database& db )
       _wso.median_props.maximum_block_size         = median_maximum_block_size;
       _wso.median_props.sbd_interest_rate          = median_sbd_interest_rate;
       _wso.median_props.subsidized_accounts_per_day = median_subsidized_accounts_per_day;
-      _wso.median_props.account_subsidy_pool_cap   = median_account_subsidy_pool_cap;
+      _wso.median_props.subsidized_accounts_burst_blocks   = median_subsidized_accounts_burst_blocks;
 
       _wso.account_subsidy_print_rate =
          ( uint64_t( median_subsidized_accounts_per_day ) * STEEM_ACCOUNT_SUBSIDY_PRECISION ) / STEEM_BLOCKS_PER_DAY;
       _wso.single_witness_subsidy_limit =
          (   uint64_t( median_subsidized_accounts_per_day )
-           * uint64_t( median_account_subsidy_pool_cap )
+           * uint64_t( median_subsidized_accounts_burst_blocks )
            * ( uint64_t( STEEM_ACCOUNT_SUBSIDY_PRECISION )
            *   uint64_t( STEEM_WITNESS_SUBSIDY_PERCENT   ) )
          ) / STEEM_100_PERCENT;

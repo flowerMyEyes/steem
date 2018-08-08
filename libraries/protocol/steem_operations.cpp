@@ -286,12 +286,12 @@ namespace steem { namespace protocol {
          FC_UNUSED( subsidized_accounts_per_day );
       }
 
-      itr = props.find( "account_subsidy_pool_cap" );
+      itr = props.find( "subsidized_accounts_burst_blocks" );
       if( itr != props.end() )
       {
-         uint32_t account_subsidy_pool_cap;
-         fc::raw::unpack_from_vector( itr->second, account_subsidy_pool_cap ); // Checks that the value can be deserialized
-         FC_UNUSED( account_subsidy_pool_cap );
+         uint32_t subsidized_accounts_burst_blocks;
+         fc::raw::unpack_from_vector( itr->second, subsidized_accounts_burst_blocks ); // Checks that the value can be deserialized
+         FC_UNUSED( subsidized_accounts_burst_blocks );
       }
    }
 

@@ -6865,7 +6865,7 @@ BOOST_AUTO_TEST_CASE( witness_set_properties_validate )
 
       BOOST_TEST_MESSAGE( "--- failure when account subsidy pool cap overflows" );
       prop_op.props.clear();
-      prop_op.props[ "account_subsidy_pool_cap" ] = fc::raw::pack_to_vector( 0x0000000100000000LL );
+      prop_op.props[ "subsidized_accounts_burst_blocks" ] = fc::raw::pack_to_vector( 0x0000000100000000LL );
       STEEM_REQUIRE_THROW( prop_op.validate(), fc::assert_exception );
    }
    FC_LOG_AND_RETHROW()
@@ -7038,12 +7038,12 @@ BOOST_AUTO_TEST_CASE( witness_set_properties_apply )
 
       BOOST_TEST_MESSAGE( "--- Testing setting account subsidy pool cap" );
       prop_op.props.erase( "subsidized_accounts_per_day" );
-      prop_op.props[ "account_subsidy_pool_cap" ] = fc::raw::pack_to_vector( 2000 );
+      prop_op.props[ "subsidized_accounts_burst_blocks" ] = fc::raw::pack_to_vector( 2000 );
       tx.clear();
       tx.operations.push_back( prop_op );
       sign( tx, signing_key );
       db->push_transaction( tx, 0 );
-      BOOST_REQUIRE( alice_witness.props.account_subsidy_pool_cap == 2000 );
+      BOOST_REQUIRE( alice_witness.props.subsidized_accounts_burst_blocks == 2000 );
 
       validate_database();
    }
@@ -7130,7 +7130,7 @@ BOOST_AUTO_TEST_CASE( claim_account_apply )
          {
             wso.median_props.account_creation_fee = ASSET( "20.000 TESTS" );
             wso.median_props.subsidized_accounts_per_day = 100;
-            wso.median_props.account_subsidy_pool_cap = 200;
+            wso.median_props.subsidized_accounts_burst_blocks = 200;
             wso.account_subsidy_print_rate = 34;
             wso.single_witness_subsidy_limit = 100000;
          });

@@ -40,7 +40,7 @@ namespace steem { namespace chain {
       uint32_t          maximum_block_size = STEEM_MIN_BLOCK_SIZE_LIMIT * 2;
       uint16_t          sbd_interest_rate  = STEEM_DEFAULT_SBD_INTEREST_RATE;
       uint32_t          subsidized_accounts_per_day = 0;
-      uint32_t          account_subsidy_pool_cap = 0;
+      uint32_t          subsidized_accounts_burst_blocks = 0;
    };
 
    /**
@@ -272,7 +272,7 @@ FC_REFLECT( steem::chain::chain_properties,
              (maximum_block_size)
              (sbd_interest_rate)
              (subsidized_accounts_per_day)
-             (account_subsidy_pool_cap)
+             (subsidized_accounts_burst_blocks)
           )
 
 FC_REFLECT( steem::chain::witness_object,
