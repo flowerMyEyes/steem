@@ -39,7 +39,7 @@ namespace steem { namespace chain {
        */
       uint32_t          maximum_block_size = STEEM_MIN_BLOCK_SIZE_LIMIT * 2;
       uint16_t          sbd_interest_rate  = STEEM_DEFAULT_SBD_INTEREST_RATE;
-      uint32_t          account_subsidy_daily_rate = 0;
+      uint32_t          subsidized_accounts_per_day = 0;
       uint32_t          account_subsidy_pool_cap = 0;
    };
 
@@ -271,7 +271,7 @@ FC_REFLECT( steem::chain::chain_properties,
              (account_creation_fee)
              (maximum_block_size)
              (sbd_interest_rate)
-             (account_subsidy_daily_rate)
+             (subsidized_accounts_per_day)
              (account_subsidy_pool_cap)
           )
 

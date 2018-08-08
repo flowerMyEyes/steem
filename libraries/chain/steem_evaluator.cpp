@@ -194,11 +194,11 @@ void witness_set_properties_evaluator::do_apply( const witness_set_properties_op
       fc::raw::unpack_from_vector( itr->second, props.sbd_interest_rate );
    }
 
-   itr = o.props.find( "account_subsidy_daily_rate" );
+   itr = o.props.find( "subsidized_accounts_per_day" );
    flags.account_subsidy_changed = itr != o.props.end();
    if( flags.account_subsidy_changed )
    {
-      fc::raw::unpack_from_vector( itr->second, props.account_subsidy_daily_rate );
+      fc::raw::unpack_from_vector( itr->second, props.subsidized_accounts_per_day );
    }
 
    itr = o.props.find( "account_subsidy_pool_cap" );
@@ -249,7 +249,7 @@ void witness_set_properties_evaluator::do_apply( const witness_set_properties_op
 
       if( flags.account_subsidy_changed )
       {
-         w.props.account_subsidy_daily_rate = props.account_subsidy_daily_rate;
+         w.props.subsidized_accounts_per_day = props.subsidized_accounts_per_day;
       }
 
       if( flags.account_subsidy_pool_changed )

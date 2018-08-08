@@ -278,12 +278,12 @@ namespace steem { namespace protocol {
          FC_ASSERT( fc::is_utf8( url ), "URL is not valid UTF8" );
       }
 
-      itr = props.find( "account_subsidy_daily_rate" );
+      itr = props.find( "subsidized_accounts_per_day" );
       if( itr != props.end() )
       {
-         uint32_t account_subsidy_daily_rate;
-         fc::raw::unpack_from_vector( itr->second, account_subsidy_daily_rate ); // Checks that the value can be deserialized
-         FC_UNUSED( account_subsidy_daily_rate );
+         uint32_t subsidized_accounts_per_day;
+         fc::raw::unpack_from_vector( itr->second, subsidized_accounts_per_day ); // Checks that the value can be deserialized
+         FC_UNUSED( subsidized_accounts_per_day );
       }
 
       itr = props.find( "account_subsidy_pool_cap" );
