@@ -140,7 +140,7 @@ struct witness_properties_change_flags
    uint32_t max_block_changed             : 1;
    uint32_t sbd_interest_changed          : 1;
    uint32_t account_subsidy_changed       : 1;
-   uint32_t account_subsidy_pool_changed  : 1;
+   uint32_t account_subsidy_burst_changed : 1;
    uint32_t key_changed                   : 1;
    uint32_t sbd_exchange_changed          : 1;
    uint32_t url_changed                   : 1;
@@ -202,8 +202,8 @@ void witness_set_properties_evaluator::do_apply( const witness_set_properties_op
    }
 
    itr = o.props.find( "subsidized_accounts_burst_blocks" );
-   flags.account_subsidy_pool_changed = itr != o.props.end();
-   if( flags.account_subsidy_pool_changed )
+   flags.account_subsidy_burst_changed = itr != o.props.end();
+   if( flags.account_subsidy_burst_changed )
    {
       fc::raw::unpack_from_vector( itr->second, props.subsidized_accounts_burst_blocks );
    }
@@ -252,7 +252,7 @@ void witness_set_properties_evaluator::do_apply( const witness_set_properties_op
          w.props.subsidized_accounts_per_day = props.subsidized_accounts_per_day;
       }
 
-      if( flags.account_subsidy_pool_changed )
+      if( flags.account_subsidy_burst_changed )
       {
          w.props.subsidized_accounts_burst_blocks = props.subsidized_accounts_burst_blocks;
       }
