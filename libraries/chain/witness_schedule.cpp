@@ -73,6 +73,11 @@ void update_median_witness_props( database& db )
    });
    uint32_t median_subsidized_accounts_burst_blocks = active[active.size()/2]->props.subsidized_accounts_burst_blocks;
 
+   // wso.num_scheduled_witnesses == 0 probably cannot happen, and will probably cause problems elsewhere.
+   // So this std::max() clamp is probably a no-op.  It only exists to make it easy to prove the division
+   // below cannot divide by zero.
+   uint32_t num_scheduled_witnesses = std::max( wso.num_scheduled_witnesses, 1 );
+
    db.modify( wso, [&]( witness_schedule_object& _wso )
    {
       _wso.median_props.account_creation_fee       = median_account_creation_fee;
@@ -81,14 +86,39 @@ void update_median_witness_props( database& db )
       _wso.median_props.subsidized_accounts_per_day = median_subsidized_accounts_per_day;
       _wso.median_props.subsidized_accounts_burst_blocks   = median_subsidized_accounts_burst_blocks;
 
-      _wso.account_subsidy_print_rate =
-         ( uint64_t( median_subsidized_accounts_per_day ) * STEEM_ACCOUNT_SUBSIDY_PRECISION ) / STEEM_BLOCKS_PER_DAY;
-      _wso.single_witness_subsidy_limit =
-         (   uint64_t( median_subsidized_accounts_per_day )
-           * uint64_t( median_subsidized_accounts_burst_blocks )
-           * ( uint64_t( STEEM_ACCOUNT_SUBSIDY_PRECISION )
-           *   uint64_t( STEEM_WITNESS_SUBSIDY_PERCENT   ) )
-         ) / STEEM_100_PERCENT;
+      // The multiplication cannot overflow uint64_t because subsidized_accounts_per_day, subsidized_accounts_burst_blocks are uint32_t.
+      // The division cannot overflow int64_t because the divisor STEEM_BLOCKS_PER_DAY is greater than 2.
+      uint64_t gmax = (   uint64_t( wso.median_props.subsidized_accounts_per_day )
+                        * uint64_t( wso.subsidized_accounts_burst_blocks )
+                      ) / STEEM_BLOCKS_PER_DAY );
+      _wso.global_account_subsidy_mbparams.max_mana = int64_t( gmax );
+      _wso.global_account_subsidy_mbparams.regen_time = median_subsidized_accounts_burst_blocks;
+
+      // Suppose k <= STEEM_BLOCKS_PER_DAY, where k = STEEM_ACCOUNT_SUBSIDY_WITNESS_OVERSUB.
+      // Since gmax <= uint64_max / STEEM_BLOCKS_PER_DAY, it follows that
+      //    k*gmax <= k*(uint64_max / STEEM_BLOCKS_PER_DAY) <= uint64_max
+
+      static_assert( STEEM_ACCOUNT_SUBSIDY_WITNESS_OVERSUB <= STEEM_BLOCKS_PER_DAY,
+        "STEEM_ACCOUNT_SUBSIDY_WITNESS_OVERSUB is too large, following computation might overflow" );
+      //
+      // The "fair" per-witness limit for n witnesses is 1/n times the global limit.
+      // We relax a little beyond the "fair" per-witness limit, to more gracefully handle
+      // situations where subsidies remain below the global limit, but are distributed
+      // lumpily between witnesses.
+      //
+      // How much relaxation (i.e. how big the OVERSUB constant should be) depends on
+      // how "lumpy" the distribution is.  We could probably set up some probability equations
+      // to figure out exactly how big it should be given some assumptions, but 200% seems
+      // reasonable, so that's what we set it to for now.
+      //
+      _wso.witness_account_subsidy_mbparams.max_mana = (gmax * uint64_t( STEEM_ACCOUNT_SUBSIDY_WITNESS_OVERSUB )) / ( num_scheduled_witnesses * STEEM_100_PERCENT );
+      //
+      // In real-time, the per-witness manabar has the same regeneration time as the global manabar.
+      // The global manabar regenerates once per block, so its time unit is blocks.
+      // The per-witness manabar regenerates when the witness produces, once per round, so its time unit is rounds.
+      // So we assign different numerical values to take into account the different time units.
+      //
+      _wso.witness_account_subsidy_mbparams.regen_time = (median_subsidized_accounts_burst_blocks / num_scheduled_witnesses) + 1;
    } );
 
    db.modify( db.get_dynamic_global_properties(), [&]( dynamic_global_property_object& _dgpo )

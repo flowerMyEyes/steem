@@ -2352,98 +2352,45 @@ void claim_account_evaluator::do_apply( const claim_account_operation& o )
 {
    FC_ASSERT( _db.has_hardfork( STEEM_HARDFORK_0_20__1771 ), "claim_account_operation is not enabled until hardfork 20." );
 
-   const auto& creator = _db.get_account( o.creator );
-   const auto& wso = _db.get_witness_schedule_object();
+   const account_object& creator = _db.get_account( o.creator );
+   const witness_schedule_object& wso = _db.get_witness_schedule_object();
 
    FC_ASSERT( creator.balance >= o.fee, "Insufficient balance to create account.", ( "creator.balance", creator.balance )( "required", o.fee ) );
 
    FC_TODO( "Remove min() after HF20" );
    int64_t creation_fee = std::min( wso.median_props.account_creation_fee.amount.value, STEEM_MAX_ACCOUNT_CREATION_FEE );
 
-   FC_ASSERT( o.fee.amount.value <= creation_fee, "Cannot pay more than account creation fee. paid: ${p} fee: ${f}", ("p", o.fee.amount.value)("f", creation_fee) );
-
-   int64_t fee_discount = creation_fee - o.fee.amount.value;
-
-   if( fee_discount > 0 )
+   if( o.fee.amount.value == 0 )
    {
-      // The calculation we want to do is:
-      //
-      //     current_subsidy = fee_discount / creation_fee
-      //
-      // However, this value is between 0 and 1, so we multiply by STEEM_ACCOUNT_SUBSIDY_PRECISION.
-      // To make sure the numerator doesn't overflow, we want to statically enforce that:
-      //
-      //     x < numeric_limits<int64_t>::max()
-      //
-      // where x, y are the numerator, denominator:
-      //
-      //     x = fee_discount * STEEM_ACCOUNT_SUBSIDY_PRECISION
-      //     y = creation_fee
-      //
-      // In order to round-against-the-user, we actually want the division to round up, i.e.
-      //
-      //     current_subsidy = ceil(x/y) = floor( (x+y-1)/y )
-      //
-      // (The second step is actually an identity which applies to any integers x, y with
-      // y > 0.)  We now need to make sure that the numerator x+y-1 does not overflow.
-      // We know that:
-      //
-      //     fee_discount <= STEEM_MAX_ACCOUNT_CREATION_FEE
-      //     y-1 < STEEM_MAX_ACCOUNT_CREATION_FEE
-      //
-      // So we know that:
-      //
-      //     x+y-1 = fee_discount * STEEM_ACCOUNT_SUBSIDY_PRECISION + y-1
-      //           < STEEM_MAX_ACCOUNT_CRAETION_FEE * STEEM_ACCOUNT_SUBSIDY_PRECISION + STEEM_MAX_ACCOUNT_CREATION_FEE
-      //           = STEEM_MAX_ACCOUNT_CREATION_FEE * (STEEM_ACCOUNT_SUBSIDY_PRECISION + 1)
-      //
-      // To check that this product does not exceed numeric_limits< int64_t >::max(), we can rearrange
-      // the inequality, obtaining:
-      //
-      //     STEEM_MAX_ACCOUNT_CREATION_FEE < numeric_limits<int64_t>::max() / (STEEM_ACCOUNT_SUBSIDY_PRECISION + 1)
-      //
-      static_assert( STEEM_MAX_ACCOUNT_CREATION_FEE < (std::numeric_limits< int64_t >::max() / (STEEM_ACCOUNT_SUBSIDY_PRECISION + 1)),
-         "Following computation will overflow" );
-
-      // creation_fee cannot be zero since fee_discount > 0 and validate() enforces fee, fee_discount are non-negative and add to creation_fee
-      int64_t current_subsidy = ( fee_discount * STEEM_ACCOUNT_SUBSIDY_PRECISION + creation_fee - 1 ) / creation_fee;
-      const auto& gpo = _db.get_dynamic_global_properties();
-
-      // This block is a little weird. We want to enforce that only elected witnesses can include the transaction, but
-      // we do not want to prevent the transaction from propogating on the p2p network. Because we do not know what type of
-      // witness will have produced the including block when the tx is broadcast, we need to disregard this assertion when the tx
-      // is propogating, but require it when applying the block.
       if( !_db.is_pending_tx() )
       {
-         const auto& current_witness = _db.get_witness( gpo.current_witness );
-         FC_ASSERT( current_witness.schedule == witness_object::elected, "Subsidized accounts can only be claimed by elected witnesses. current_witness:${w} witness_type:${t}",
+         const witness_object& current_witness = _db.get_witness( gpo.current_witness );
+         FC_ASSERT( current_witness.schedule == witness_object::elected,
+            "Subsidized accounts can only be claimed by elected witnesses. current_witness:${w} witness_type:${t}",
             ("w",current_witness.owner)("t",current_witness.schedule) );
 
-         uint32_t delta_time = ( _db.head_block_time() - current_witness.last_subsidy_update ).to_seconds();
+         FC_ASSERT( current_witness.witness_account_subsidies.has_mana( STEEM_ACCOUNT_SUBSIDY_PRECISION ),
+            "Witness ${w} does not have enough subsidies to create subsidized account",
+            ("w", current_witness.owner) );
 
-         // linear decay to enforce no more than 10% max by a single witness over 48 hours.
-         uint64_t recovered_subsidies = ( uint64_t( delta_time ) * uint64_t( wso.single_witness_subsidy_limit ) )
-                / (STEEM_ACCOUNT_SUBSIDY_BURST_DAYS * 60 * 60 * 24);
-         uint64_t new_subsidies = current_witness.recent_account_subsidies - std::min( current_witness.recent_account_subsidies, recovered_subsidies );
-
-         new_subsidies += current_subsidy;
-
-         FC_ASSERT( new_subsidies <= wso.single_witness_subsidy_limit, "Witness has claimed too many subsidized accounts recents. Claimed: ${claimed} Limit: ${limit}",
-            ("claimed", new_subsidies)("limit", wso.single_witness_subsidy_limit) );
-
-         _db.modify( current_witness, [&]( witness_object& w )
+         _db.modify( current_witness, []( witness_object& w )
          {
-            w.recent_account_subsidies = new_subsidies;
-            w.last_subsidy_update = _db.head_block_time();
-         });
+            w.witness_account_subsidies.use_mana( STEEM_ACCOUNT_SUBSIDY_PRECISION );
+         } );
       }
 
-      FC_ASSERT( uint64_t( current_subsidy ) <= gpo.available_account_subsidies, "There are not enough subsidized accounts to claim" );
-
-      _db.modify( gpo, [&]( dynamic_global_property_object& gpo )
+      const global_property_object& gpo = _db.get_dynamic_global_properties();
+      FC_ASSERT( gpo.global_account_subsidies.has_mana( STEEM_ACCOUNT_SUBSIDY_PRECISION ),
+         "The global subsidy pool does not have enough subsidies to create subsidized account" );
+      _db.modify( gpo, []( global_property_object& g )
       {
-         gpo.available_account_subsidies -= current_subsidy;
-      });
+         g.global_account_subsidies.use_mana( STEEM_ACCOUNT_SUBSIDY_PRECISION );
+      } );
+   }
+   else
+   {
+      FC_ASSERT( o.fee.amount.value == creation_fee, "Must pay either 0, or exactly the account creation fee.  Paid: ${p}, fee: ${f}",
+         ("p", o.fee)("f", asset(creation_fee, STEEM_SYMBOL) ) );
    }
 
    _db.adjust_balance( _db.get_account( STEEM_NULL_ACCOUNT ), o.fee );

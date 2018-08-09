@@ -118,10 +118,18 @@ namespace steem { namespace chain {
 
          uint64_t reverse_auction_seconds = 0;
 
-         uint64_t available_account_subsidies = 0;
+         /**
+          * Represents the account subsidies the blockchain is able to give out.
+          *
+          * global_account_subsidies.last_update_time represents the total number of
+          * blocks produced by the blockchain since the account subsidy function was
+          * enabled in HF20.
+          */
+         manabar global_account_subsidies;
 
          uint16_t sbd_stop_percent = 0;
          uint16_t sbd_start_percent = 0;
+
 #ifdef STEEM_ENABLE_SMT
          asset smt_creation_fee = asset( 1000000, SBD_SYMBOL );
 #endif
@@ -167,7 +175,7 @@ FC_REFLECT( steem::chain::dynamic_global_property_object,
              (vote_power_reserve_rate)
              (delegation_return_period)
              (reverse_auction_seconds)
-             (available_account_subsidies)
+             (global_account_subsidies)
              (sbd_stop_percent)
              (sbd_start_percent)
 #ifdef STEEM_ENABLE_SMT

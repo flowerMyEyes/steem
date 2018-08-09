@@ -283,7 +283,8 @@ namespace steem { namespace protocol {
       {
          uint32_t subsidized_accounts_per_day;
          fc::raw::unpack_from_vector( itr->second, subsidized_accounts_per_day ); // Checks that the value can be deserialized
-         FC_UNUSED( subsidized_accounts_per_day );
+         FC_ASSERT( subsidized_accounts_per_day < STEEM_MAX_SUBSIDIZED_ACCOUNTS_PER_DAY,
+            "subsidized_accounts_per_day must be less than ${m}", ("m", STEEM_MAX_SUBSIDIZED_ACCOUNTS_PER_DAY) );
       }
 
       itr = props.find( "subsidized_accounts_burst_blocks" );
@@ -291,7 +292,11 @@ namespace steem { namespace protocol {
       {
          uint32_t subsidized_accounts_burst_blocks;
          fc::raw::unpack_from_vector( itr->second, subsidized_accounts_burst_blocks ); // Checks that the value can be deserialized
-         FC_UNUSED( subsidized_accounts_burst_blocks );
+         FC_ASSERT( subsidized_accounts_burst_blocks > 0,
+            "subsidized_accounts_burst_blocks must be greater than 0" );
+         FC_ASSERT( subsidized_accounts_burst_blocks <= STEEM_ACCOUNT_SUBSIDY_MAX_BURST_BLOCKS,
+            "subsidized_accounts_burst_blocks must be less than ${m}",
+            ("m", STEEM_ACCOUNT_SUBSIDY_MAX_BURST_BLOCKS) );
       }
    }
 

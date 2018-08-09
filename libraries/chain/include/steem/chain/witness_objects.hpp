@@ -39,8 +39,8 @@ namespace steem { namespace chain {
        */
       uint32_t          maximum_block_size = STEEM_MIN_BLOCK_SIZE_LIMIT * 2;
       uint16_t          sbd_interest_rate  = STEEM_DEFAULT_SBD_INTEREST_RATE;
-      uint32_t          subsidized_accounts_per_day = 0;
-      uint32_t          subsidized_accounts_burst_blocks = 0;
+      uint32_t          subsidized_accounts_per_day = STEEM_ACCOUNT_SUBSIDY_DEFAULT;
+      uint32_t          subsidized_accounts_burst_blocks = STEEM_ACCOUNT_SUBSIDY_DEFAULT_BURST_BLOCKS;
    };
 
    /**
@@ -142,8 +142,14 @@ namespace steem { namespace chain {
          hardfork_version  hardfork_version_vote;
          time_point_sec    hardfork_time_vote = STEEM_GENESIS_TIME;
 
-         uint64_t          recent_account_subsidies = 0;
-         time_point_sec    last_subsidy_update;
+         /**
+          * Represents the account subsidies the witness is able to give out.
+          *
+          * witness_account_subsidies.last_update_time represents the total number of
+          * blocks produced by this witness since the account subsidy function was
+          * enabled in HF20.
+          */
+         manabar           witness_account_subsidies;
    };
 
 
@@ -193,9 +199,10 @@ namespace steem { namespace chain {
          uint8_t max_runner_witnesses           = STEEM_MAX_RUNNER_WITNESSES_HF0;
          uint8_t hardfork_required_witnesses    = STEEM_HARDFORK_REQUIRED_WITNESSES;
 
-         // Derivided fields that are stored for easy caching and reading of values.
-         uint64_t account_subsidy_print_rate = 0; // Per block print rate with precision 6
-         uint64_t single_witness_subsidy_limit = 0; // Per witness limit
+         // Cache results of computations that only depend on the witness schedule
+         // to hopefully improve performance
+         manabar_params global_account_subsidy_mbparams;
+         manabar_params witness_account_subsidy_mbparams;
    };
 
 
@@ -286,7 +293,7 @@ FC_REFLECT( steem::chain::witness_object,
              (last_work)
              (running_version)
              (hardfork_version_vote)(hardfork_time_vote)
-             (recent_account_subsidies)(last_subsidy_update)
+             (witness_account_subsidies)
           )
 CHAINBASE_SET_INDEX_TYPE( steem::chain::witness_object, steem::chain::witness_index )
 
@@ -301,6 +308,7 @@ FC_REFLECT( steem::chain::witness_schedule_object,
              (max_miner_witnesses)
              (max_runner_witnesses)
              (hardfork_required_witnesses)
-             (account_subsidy_print_rate)(single_witness_subsidy_limit)
+             (global_account_subsidy_mbparams)
+             (witness_account_subsidy_mbparams)
           )
 CHAINBASE_SET_INDEX_TYPE( steem::chain::witness_schedule_object, steem::chain::witness_schedule_index )

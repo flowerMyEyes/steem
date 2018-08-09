@@ -22,6 +22,7 @@ struct manabar_params
    void validate()const
    {
       FC_ASSERT( max_mana >= 0 );
+      FC_ASSERT( regen_time > 0 );
    }
 };
 

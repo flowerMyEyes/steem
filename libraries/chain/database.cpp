@@ -3617,6 +3617,8 @@ void database::update_global_dynamic_data( const signed_block& b )
       }
    }
 
+   const witness_schedule_object& wso = get_witness_schedule_object();
+
    // dynamic global properties updating
    modify( _dgp, [&]( dynamic_global_property_object& dgp )
    {
@@ -3634,6 +3636,10 @@ void database::update_global_dynamic_data( const signed_block& b )
       dgp.head_block_id = *_currently_processing_block_id;
       dgp.time = b.timestamp;
       dgp.current_aslot += missed_blocks+1;
+      if( has_hardfork( STEEM_HARDFORK_0_20__2651 ) )
+      {
+          dgp.global_account_subsidies.regenerate( wso.global_account_subsidy_mbparams, dgp.global_account_subsidies.last_update_time+1 );
+      }
    } );
 
    if( !(get_node_properties().skip_flags & skip_undo_history_check) )
@@ -3674,11 +3680,16 @@ void database::update_signing_witness(const witness_object& signing_witness, con
 { try {
    const dynamic_global_property_object& dpo = get_dynamic_global_properties();
    uint64_t new_block_aslot = dpo.current_aslot + get_slot_at_time( new_block.timestamp );
+   const witness_schedule_object& wso = get_witness_schedule_object();
 
    modify( signing_witness, [&]( witness_object& _wit )
    {
       _wit.last_aslot = new_block_aslot;
       _wit.last_confirmed_block_num = new_block.block_num();
+      if( has_hardfork( STEEM_HARDFORK_0_20__2651 ) )
+      {
+         _wit.witness_account_subsidies.regenerate( wso.witness_account_subsidy_mbparams, _wit.witness_account_subsidies.last_update_time+1 );
+      }
    } );
 } FC_CAPTURE_AND_RETHROW() }
 
